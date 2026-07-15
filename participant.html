@@ -1,25 +1,65 @@
 <!DOCTYPE html>
-<html><head><meta name='viewport' content='width=device-width,initial-scale=1'>
-<style>
-body{font-family:sans-serif;padding:10px}.grid{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:6px}
-.cell{aspect-ratio:1;border:2px dashed #888;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.cell img{width:100%;height:100%;object-fit:cover}
-#confetti{position:fixed;inset:0;pointer-events:none}
-.piece{position:absolute;animation:fall 3s linear forwards}
-@keyframes fall{from{transform:translateY(-50px)}to{transform:translateY(100vh) rotate(720deg);opacity:0}}
-</style></head><body>
-<h2>フォトビンゴ</h2>
-<p>QRコードから参加</p>
-<select id='size'><option value='3'>3×3</option><option value='5'>5×5</option></select>
-<div id='grid' class='grid'></div>
-<input id='pick' type='file' accept='image/*' capture='environment' hidden>
-<div id='confetti'></div>
-<script>
-const g=document.getElementById('grid'),p=document.getElementById('pick'),c=document.getElementById('confetti');let target;
-function draw(n){g.style.setProperty('--n',n);g.innerHTML='';for(let i=0;i<n*n;i++){let d=document.createElement('div');d.className='cell';d.textContent=i+1;d.onclick=()=>{target=d;p.click();};g.appendChild(d);}}
-function celebrate(){for(let i=0;i<80;i++){let e=document.createElement('div');e.className='piece';e.textContent='🎉';e.style.left=Math.random()*100+'vw';c.appendChild(e);setTimeout(()=>e.remove(),3000);}alert('BINGO達成！');}
-function check(){if([...g.children].every(x=>x.querySelector('img')))celebrate();}
-document.getElementById('size').onchange=e=>draw(+e.target.value);
-draw(3);
-p.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{target.innerHTML='<img src="'+r.result+'">';check();};r.readAsDataURL(f);};
-</script></body></html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>繋がる！七地区フォトビンゴ in 鹿児島</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="logo">
+📷
+</div>
+
+<h1>
+繋がる！<br>
+七地区フォトビンゴ<br>
+in 鹿児島
+</h1>
+
+<p class="subtitle">
+
+みんなで鹿児島を巡って
+ビンゴを完成させよう！
+
+</p>
+
+<h3>チーム番号</h3>
+
+<select id="team">
+
+<option value="1">チーム1</option>
+<option value="2">チーム2</option>
+<option value="3">チーム3</option>
+<option value="4">チーム4</option>
+<option value="5">チーム5</option>
+<option value="6">チーム6</option>
+<option value="7">チーム7</option>
+<option value="8">チーム8</option>
+<option value="9">チーム9</option>
+<option value="10">チーム10</option>
+
+</select>
+
+<button id="startButton">
+
+参加する
+
+</button>
+
+</div>
+
+<script src="js/participant.js"></script>
+
+</body>
+
+</html>
