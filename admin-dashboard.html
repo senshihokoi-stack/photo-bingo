@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>フォトビンゴ 管理者ダッシュボード</title>
+
+<link
+    rel="stylesheet"
+    href="css/style.css"
+>
+
+</head>
+
+
+<body>
+
+<header>
+
+<h1>
+繋がる！七地区フォトビンゴ
+</h1>
+
+<p>
+管理者ダッシュボード
+</p>
+
+</header>
+
+
+<main>
+
+<div class="admin-dashboard">
+
+    <h2>
+        チーム進捗
+    </h2>
+
+
+    <div
+        id="teamList"
+        class="team-list"
+    >
+
+        <p>
+            チーム情報を読み込んでいます...
+        </p>
+
+    </div>
+
+</div>
+
+
+<!-- 写真詳細 -->
+
+<div
+    id="photoModal"
+    class="photo-modal"
+>
+
+    <div class="photo-modal-content">
+
+        <button
+            id="closePhotoModal"
+            class="close-photo-modal"
+        >
+            ✕
+        </button>
+
+
+        <h2 id="photoModalTitle">
+            写真詳細
+        </h2>
+
+
+        <div
+            id="photoList"
+            class="photo-list"
+        >
+        </div>
+
+    </div>
+
+</div>
+
+
+</main>
+
+
+<script
+    type="module"
+    src="js/admin-dashboard.js"
+></script>
+
+
+</body>
+
+</html>
