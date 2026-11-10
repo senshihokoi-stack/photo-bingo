@@ -6,15 +6,175 @@ import {
     db
 } from "./firebase.js";
 
-
 import {
     collection,
+    collectionGroup,
     getDocs,
-    query,
-    orderBy,
     doc,
-    deleteDoc
+    deleteDoc,
+    getDoc,
+    setDoc,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+
+// ============================
+// 初期ミッション
+// ============================
+
+const defaultMissions = [
+
+    {
+        title: "桜島",
+        hint: "鹿児島のシンボル！",
+        info: "現在も噴火活動を続ける世界有数の活火山です。"
+    },
+
+    {
+        title: "しろくま",
+        hint: "鹿児島名物のかき氷、店頭のオブジェを撮影",
+        info: "天文館むじゃきが発祥として有名です。"
+    },
+
+    {
+        title: "西郷隆盛の銅像",
+        hint: "鹿児島の英雄",
+        info: "愛称はせごどん、鹿児島と上野の銅像の違いに気付いた？"
+    },
+
+    {
+        title: "城門",
+        hint: "歴史を感じる門を探そう",
+        info: "鶴丸城跡周辺で見つかるかも。"
+    },
+
+    {
+        title: "大久保利通",
+        hint: "維新三傑の一人",
+        info: "鹿児島中央駅近くにも銅像があります。"
+    },
+
+    {
+        title: "山路実行委員長",
+        hint: "見つけたら一緒に写真！",
+        info: "山路さんが皆と写真を撮るのを楽しみにしています😊"
+    },
+
+    {
+        title: "鹿児島名物",
+        hint: "食べ物でも飲み物でもOK",
+        info: "黒豚・さつま揚げ・芋焼酎など！"
+    },
+
+    {
+        title: "〇〇に乗った鰻",
+        hint: "とある乗り物に乗った鰻を撮影",
+        info: "鹿児島県は養殖うなぎの名産地です。"
+    },
+
+    {
+        title: "ロケット",
+        hint: "宇宙に関するもの",
+        info: "天文館宇宙ビルの外壁に...🚀"
+    },
+
+    {
+        title: "全員自撮り",
+        hint: "チーム全員集合！",
+        info: "最高の笑顔で撮影しよう！"
+    },
+
+    {
+        title: "他チーム",
+        hint: "他地区の人と写真",
+        info: "交流が今回のテーマです！"
+    },
+
+    {
+        title: "観覧車",
+        hint: "赤い観覧車を探そう",
+        info: "アミュプラザ鹿児島のシンボルです。"
+    },
+
+    {
+        title: "路面電車",
+        hint: "鹿児島市電を撮影",
+        info: "観光客にも人気です。"
+    },
+
+    {
+        title: "天文館",
+        hint: "天文館らしい風景",
+        info: "鹿児島最大の繁華街です。"
+    },
+
+    {
+        title: "黒豚",
+        hint: "黒豚グルメを探そう",
+        info: "鹿児島ブランドの代表格！"
+    },
+
+    {
+        title: "顔はめパネル",
+        hint: "顔はめパネルで撮影",
+        info: "鹿児島らしいパネルを探してみよう！"
+    },
+
+    {
+        title: "噴水",
+        hint: "噴水を見つけよう",
+        info: "公園や駅前にあります。"
+    },
+
+    {
+        title: "マンホール",
+        hint: "デザインマンホール",
+        info: "鹿児島らしい絵柄を探してみよう！"
+    },
+
+    {
+        title: "神社",
+        hint: "神社で一枚",
+        info: "照國神社などがおすすめです。"
+    },
+
+    {
+        title: "商店街",
+        hint: "商店街の景色",
+        info: "天文館アーケードも対象です。"
+    },
+
+    {
+        title: "笑顔",
+        hint: "最高の笑顔を撮ろう",
+        info: "みんなが笑顔ならOK！"
+    },
+
+    {
+        title: "灰色の物",
+        hint: "灰色のものを探そう",
+        info: "桜島の火山灰をイメージ！"
+    },
+
+    {
+        title: "アーケードのステンドグラス",
+        hint: "屋根付き商店街",
+        info: "上も見て歩いてみよう！"
+    },
+
+    {
+        title: "看板",
+        hint: "面白い看板を探そう",
+        info: "鹿児島らしいものなら何でもOK！"
+    },
+
+    {
+        title: "自由枠",
+        hint: "好きなものを撮影！",
+        info: "チームの個性を見せよう！"
+    }
+
+];
 
 
 // ============================
@@ -27,28 +187,512 @@ const teamList =
     );
 
 
-const photoModal =
-    document.getElementById(
-        "photoModal"
+// ============================
+// HTMLエスケープ
+// ============================
+
+function escapeHtml(value) {
+
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+}
+
+
+// ============================
+// ミッション編集エリア作成
+// ============================
+
+function createMissionEditor() {
+
+    const editor =
+        document.getElementById(
+            "missionEditor"
+        );
+
+
+    if (!editor) {
+
+        console.error(
+            "missionEditor が見つかりません"
+        );
+
+        return null;
+
+    }
+
+
+    // すでに一覧があるか確認
+    let list =
+        document.getElementById(
+            "missionEditorList"
+        );
+
+
+    // なければ missionEditor の中に作る
+    if (!list) {
+
+        list =
+            document.createElement(
+                "div"
+            );
+
+        list.id =
+            "missionEditorList";
+
+        list.className =
+            "mission-editor-list";
+
+
+        // ★ここが今回の修正ポイント
+        // insertBefore は使わず、
+        // missionEditor の中に直接追加する
+
+        editor.appendChild(
+            list
+        );
+
+    }
+
+
+    return list;
+
+}
+
+
+// ============================
+// Firestoreからミッション取得
+// ============================
+
+async function loadMissions() {
+
+    try {
+
+        const missionDoc =
+            await getDoc(
+                doc(
+                    db,
+                    "settings",
+                    "missions"
+                )
+            );
+
+
+        if (
+            missionDoc.exists()
+        ) {
+
+            const data =
+                missionDoc.data();
+
+
+            if (
+                Array.isArray(
+                    data.missions
+                ) &&
+                data.missions.length === 25
+            ) {
+
+                console.log(
+                    "Firestoreからミッション設定を読み込みました"
+                );
+
+                return data.missions;
+
+            }
+
+        }
+
+
+        console.log(
+            "Firestoreにミッション設定がないため初期値を使用します"
+        );
+
+
+        return defaultMissions;
+
+
+    } catch (error) {
+
+        console.error(
+            "ミッション取得エラー:",
+            error
+        );
+
+
+        return defaultMissions;
+
+    }
+
+}
+
+
+// ============================
+// ミッション編集画面表示
+// ============================
+
+async function renderMissionEditor() {
+
+    const list =
+        createMissionEditor();
+
+
+    if (!list) {
+
+        return;
+
+    }
+
+
+    const missions =
+        await loadMissions();
+
+
+    list.innerHTML =
+        "";
+
+
+    missions.forEach(
+        function (
+            mission,
+            index
+        ) {
+
+            const box =
+                document.createElement(
+                    "div"
+                );
+
+
+            box.className =
+                "mission-edit-box";
+
+
+            box.style.marginBottom =
+                "20px";
+
+            box.style.padding =
+                "15px";
+
+            box.style.border =
+                "1px solid #ddd";
+
+            box.style.borderRadius =
+                "10px";
+
+            box.style.background =
+                "#fafafa";
+
+
+            box.innerHTML = `
+
+                <h3>
+                    ${index + 1}. ミッション
+                </h3>
+
+
+                <label>
+                    ミッション名
+                </label>
+
+
+                <input
+                    type="text"
+                    class="mission-title-input"
+                    value="${escapeHtml(
+                        mission.title || ""
+                    )}"
+                    data-index="${index}"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        margin:5px 0 12px;
+                        font-size:16px;
+                    "
+                >
+
+
+                <label>
+                    ヒント
+                </label>
+
+
+                <textarea
+                    class="mission-hint-input"
+                    data-index="${index}"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        min-height:70px;
+                        padding:10px;
+                        margin:5px 0 12px;
+                        font-size:15px;
+                    "
+                >${escapeHtml(
+                    mission.hint || ""
+                )}</textarea>
+
+
+                <label>
+                    豆知識
+                </label>
+
+
+                <textarea
+                    class="mission-info-input"
+                    data-index="${index}"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        min-height:70px;
+                        padding:10px;
+                        margin:5px 0;
+                        font-size:15px;
+                    "
+                >${escapeHtml(
+                    mission.info || ""
+                )}</textarea>
+
+            `;
+
+
+            list.appendChild(
+                box
+            );
+
+        }
     );
 
 
-const photoModalTitle =
-    document.getElementById(
-        "photoModalTitle"
-    );
+    const saveButton =
+        document.getElementById(
+            "saveMissionsButton"
+        );
 
 
-const photoList =
-    document.getElementById(
-        "photoList"
-    );
+    if (saveButton) {
+
+        // 重複登録を防ぐため、
+        // 一度ボタンを置き換える
+
+        const newSaveButton =
+            saveButton.cloneNode(true);
 
 
-const closePhotoModal =
-    document.getElementById(
-        "closePhotoModal"
-    );
+        saveButton.parentNode.replaceChild(
+            newSaveButton,
+            saveButton
+        );
+
+
+        newSaveButton.addEventListener(
+            "click",
+            saveMissions
+        );
+
+    }
+
+}
+
+
+// ============================
+// ミッション保存
+// ============================
+
+async function saveMissions() {
+
+    const button =
+        document.getElementById(
+            "saveMissionsButton"
+        );
+
+
+    const message =
+        document.getElementById(
+            "missionSaveMessage"
+        );
+
+
+    const titleInputs =
+        document.querySelectorAll(
+            ".mission-title-input"
+        );
+
+
+    const hintInputs =
+        document.querySelectorAll(
+            ".mission-hint-input"
+        );
+
+
+    const infoInputs =
+        document.querySelectorAll(
+            ".mission-info-input"
+        );
+
+
+    if (
+        titleInputs.length !== 25 ||
+        hintInputs.length !== 25 ||
+        infoInputs.length !== 25
+    ) {
+
+        alert(
+            "ミッション入力欄が25個見つかりません。"
+        );
+
+        return;
+
+    }
+
+
+    const missions = [];
+
+
+    for (
+        let i = 0;
+        i < 25;
+        i++
+    ) {
+
+        missions.push({
+
+            title:
+                titleInputs[i]
+                    .value
+                    .trim(),
+
+            hint:
+                hintInputs[i]
+                    .value
+                    .trim(),
+
+            info:
+                infoInputs[i]
+                    .value
+                    .trim()
+
+        });
+
+    }
+
+
+    if (button) {
+
+        button.disabled =
+            true;
+
+        button.textContent =
+            "💾 保存中...";
+
+    }
+
+
+    if (message) {
+
+        message.textContent =
+            "";
+
+    }
+
+
+    try {
+
+        await setDoc(
+
+            doc(
+                db,
+                "settings",
+                "missions"
+            ),
+
+            {
+                missions:
+                    missions,
+
+                updatedAt:
+                    serverTimestamp()
+            }
+
+        );
+
+
+        // 管理者ブラウザにも保存
+        localStorage.setItem(
+            "adminMissions",
+            JSON.stringify(
+                missions
+            )
+        );
+
+
+        if (message) {
+
+            message.textContent =
+                "✅ ミッション設定を保存しました！";
+
+            message.style.color =
+                "green";
+
+        }
+
+
+        alert(
+            "ミッション設定を保存しました！"
+        );
+
+
+        console.log(
+            "ミッション保存完了:",
+            missions
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "ミッション保存エラー:",
+            error
+        );
+
+
+        if (message) {
+
+            message.textContent =
+                "❌ 保存に失敗しました。";
+
+            message.style.color =
+                "red";
+
+        }
+
+
+        alert(
+            "ミッションの保存に失敗しました。\n\n" +
+            error.message
+        );
+
+
+    } finally {
+
+        if (button) {
+
+            button.disabled =
+                false;
+
+            button.textContent =
+                "💾 ミッションを保存";
+
+        }
+
+    }
+
+}
 
 
 // ============================
@@ -68,17 +712,144 @@ async function loadTeams() {
         `;
 
 
-        const teamsSnapshot =
+        // ============================
+        // photosを全部取得
+        // ============================
+
+        const photosSnapshot =
             await getDocs(
-                collection(
+                collectionGroup(
                     db,
-                    "teams"
+                    "photos"
                 )
             );
 
 
+        console.log(
+            "写真ドキュメント数:",
+            photosSnapshot.size
+        );
+
+
+        // ============================
+        // チーム別に整理
+        // ============================
+
+        const teams = {};
+
+
+        photosSnapshot.forEach(
+            function(photoDoc) {
+
+                const data =
+                    photoDoc.data();
+
+
+                let team =
+                    data.team;
+
+
+                // teamフィールドがない場合
+                // パスからチーム番号を取得
+
+                if (!team) {
+
+                    const parentTeam =
+                        photoDoc.ref
+                            .parent
+                            .parent;
+
+
+                    if (parentTeam) {
+
+                        team =
+                            parentTeam.id;
+
+                    }
+
+                }
+
+
+                if (!team) {
+
+                    return;
+
+                }
+
+
+                if (!teams[team]) {
+
+                    teams[team] = {
+
+                        photos: {},
+
+                        photoList: []
+
+                    };
+
+                }
+
+
+                const missionIndex =
+                    data.missionIndex;
+
+
+                const photoData = {
+
+                    id:
+                        photoDoc.id,
+
+                    imageUrl:
+                        data.imageUrl,
+
+                    missionIndex:
+                        missionIndex,
+
+                    missionTitle:
+                        data.missionTitle || "",
+
+                    createdAt:
+                        data.createdAt || null
+
+                };
+
+
+                teams[team]
+                    .photoList
+                    .push(
+                        photoData
+                    );
+
+
+                if (
+                    missionIndex !== undefined &&
+                    missionIndex !== null
+                ) {
+
+                    teams[team]
+                        .photos[
+                            missionIndex
+                        ] =
+                        photoData;
+
+                }
+
+            }
+        );
+
+
+        const teamNumbers =
+            Object.keys(
+                teams
+            );
+
+
+        // ============================
+        // チームなし
+        // ============================
+
         if (
-            teamsSnapshot.empty
+            teamNumbers.length === 0
         ) {
 
             teamList.innerHTML = `
@@ -86,7 +857,7 @@ async function loadTeams() {
                 <div class="no-team">
 
                     <p>
-                        まだチームの写真登録がありません。
+                        まだ写真を登録したチームがありません。
                     </p>
 
                 </div>
@@ -98,299 +869,319 @@ async function loadTeams() {
         }
 
 
-        teamList.innerHTML = "";
+        // ============================
+        // チーム番号順
+        // ============================
 
+        teamNumbers.sort(
+            function(a, b) {
 
-        for (
-            const teamDoc of teamsSnapshot.docs
-        ) {
-
-            const teamName =
-                teamDoc.id;
-
-
-            // ============================
-            // 写真一覧取得
-            // ============================
-
-            const photosSnapshot =
-                await getDocs(
-                    collection(
-                        db,
-                        "teams",
-                        teamName,
-                        "photos"
-                    )
-                );
-
-
-            const photoCount =
-                photosSnapshot.size;
-
-
-            // ============================
-            // チームカード
-            // ============================
-
-            const card =
-                document.createElement(
-                    "div"
-                );
-
-
-            card.className =
-                "team-card";
-
-
-            // ============================
-            // 進捗率
-            // ============================
-
-            const progress =
-                Math.round(
-                    (
-                        photoCount /
-                        25
-                    ) *
-                    100
-                );
-
-
-            // ============================
-            // COMPLETE判定
-            // ============================
-
-            const isComplete =
-                photoCount >= 25;
-
-
-            if (
-                isComplete
-            ) {
-
-                card.classList.add(
-                    "team-complete"
+                return (
+                    Number(a) -
+                    Number(b)
                 );
 
             }
+        );
 
 
-            card.innerHTML = `
+        teamList.innerHTML =
+            "";
 
-                <div class="team-card-header">
 
-                    <h3>
-                        チーム ${teamName}
-                    </h3>
+        // ============================
+        // チーム表示
+        // ============================
+
+        teamNumbers.forEach(
+            function(team) {
+
+                const teamData =
+                    teams[team];
+
+
+                const completedCount =
+                    Object.keys(
+                        teamData.photos
+                    ).length;
+
+
+                const progress =
+                    Math.round(
+                        (
+                            completedCount /
+                            25
+                        ) *
+                        100
+                    );
+
+
+                const isComplete =
+                    completedCount >= 25;
+
+
+                const card =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                card.className =
+                    "admin-team-card";
+
+
+                if (
+                    isComplete
+                ) {
+
+                    card.classList.add(
+                        "team-complete"
+                    );
+
+                }
+
+
+                // ============================
+                // 写真HTML
+                // ============================
+
+                let photosHTML =
+                    "";
+
+
+                const photos =
+                    Object.values(
+                        teamData.photos
+                    ).sort(
+                        function(a, b) {
+
+                            return (
+                                Number(
+                                    a.missionIndex
+                                ) -
+                                Number(
+                                    b.missionIndex
+                                )
+                            );
+
+                        }
+                    );
+
+
+                photos.forEach(
+                    function(photo) {
+
+                        if (
+                            !photo.imageUrl
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        photosHTML += `
+
+                            <div
+                                class="admin-photo-item"
+                                data-image-url="${escapeHtml(
+                                    photo.imageUrl
+                                )}"
+                                data-mission-title="${escapeHtml(
+                                    photo.missionTitle
+                                )}"
+                                style="
+                                    width:140px;
+                                    cursor:pointer;
+                                "
+                            >
+
+                                <img
+                                    src="${escapeHtml(
+                                        photo.imageUrl
+                                    )}"
+                                    alt="${escapeHtml(
+                                        photo.missionTitle
+                                    )}"
+                                    style="
+                                        width:140px;
+                                        height:100px;
+                                        object-fit:cover;
+                                        border-radius:8px;
+                                        display:block;
+                                    "
+                                >
+
+
+                                <div
+                                    style="
+                                        font-size:13px;
+                                        margin-top:5px;
+                                    "
+                                >
+
+                                    ${photo.missionIndex}.
+                                    ${escapeHtml(
+                                        photo.missionTitle
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                        `;
+
+                    }
+                );
+
+
+                // ============================
+                // カード
+                // ============================
+
+                card.innerHTML = `
+
+                    <div
+                        class="admin-team-name"
+                    >
+
+                        チーム ${escapeHtml(team)}
+
+                    </div>
+
+
+                    <div
+                        class="admin-progress"
+                    >
+
+                        ${completedCount} / 25
+
+                    </div>
+
+
+                    <div
+                        class="admin-progress-bar"
+                    >
+
+                        <div
+                            class="admin-progress-fill"
+                            style="
+                                width:${Math.min(
+                                    progress,
+                                    100
+                                )}%;
+                            "
+                        ></div>
+
+                    </div>
+
+
+                    <div
+                        class="admin-percentage"
+                    >
+
+                        ${progress}%
+
+                    </div>
+
+
+                    <div
+                        style="
+                            margin-top:15px;
+                            margin-bottom:10px;
+                            font-weight:bold;
+                        "
+                    >
+
+                        📷 登録写真
+                        ${photos.length}枚
+
+                    </div>
+
+
+                    <div
+                        class="admin-photo-grid"
+                        style="
+                            display:flex;
+                            flex-wrap:wrap;
+                            gap:10px;
+                        "
+                    >
+
+                        ${photosHTML}
+
+                    </div>
+
 
                     ${
                         isComplete
                         ?
                         `
-                        <span class="complete-badge">
-                            🎉 COMPLETE!!
-                        </span>
+                        <div
+                            class="admin-complete"
+                            style="
+                                margin-top:15px;
+                            "
+                        >
+
+                            🏆 COMPLETE!!
+
+                        </div>
                         `
                         :
                         ""
                     }
 
-                </div>
+                `;
 
 
-                <div class="team-progress">
+                // ============================
+                // 写真クリック
+                // ============================
 
-                    <strong>
-                        ${photoCount} / 25
-                    </strong>
-
-                    <span>
-                        ${progress}%
-                    </span>
-
-                </div>
-
-
-                <div class="progress-bar">
-
-                    <div
-                        class="progress-fill"
-                        style="width:${Math.min(progress, 100)}%"
-                    >
-                    </div>
-
-                </div>
-
-
-                <div class="team-card-buttons">
-
-                    <button
-                        class="view-team-button"
-                    >
-                        📷 写真を確認
-                    </button>
-
-
-                    <button
-                        class="delete-team-button"
-                    >
-                        🗑️ チームを削除
-                    </button>
-
-                </div>
-
-            `;
-
-
-            // ============================
-            // 写真確認ボタン
-            // ============================
-
-            const viewButton =
-                card.querySelector(
-                    ".view-team-button"
-                );
-
-
-            viewButton.addEventListener(
-                "click",
-                function () {
-
-                    showTeamPhotos(
-                        teamName,
-                        photosSnapshot
+                const photoItems =
+                    card.querySelectorAll(
+                        ".admin-photo-item"
                     );
 
-                }
-            );
 
+                photoItems.forEach(
+                    function(item) {
 
-            // ============================
-            // チーム削除ボタン
-            // ============================
+                        item.addEventListener(
+                            "click",
+                            function() {
 
-            const deleteButton =
-                card.querySelector(
-                    ".delete-team-button"
+                                showPhotoModal(
+                                    item.dataset.imageUrl,
+                                    item.dataset.missionTitle
+                                );
+
+                            }
+                        );
+
+                    }
                 );
 
 
-            deleteButton.addEventListener(
-                "click",
-                async function () {
+                // ============================
+                // カード追加
+                // ============================
 
-                    const confirmed =
-                        confirm(
-                            `チーム ${teamName} を削除しますか？\n\nこのチームのFirestore上の写真データ ${photoCount}件も削除されます。\n\n※ Cloudinaryに保存されている画像は削除されません。`
-                        );
+                teamList.appendChild(
+                    card
+                );
 
-
-                    if (
-                        !confirmed
-                    ) {
-
-                        return;
-
-                    }
+            }
+        );
 
 
-                    // ボタンを無効化
-                    deleteButton.disabled =
-                        true;
+        console.log(
+            "★★ 管理者画面表示完了 ★★"
+        );
 
 
-                    deleteButton.textContent =
-                        "削除中...";
-
-
-                    try {
-
-                        // ============================
-                        // 写真データを削除
-                        // ============================
-
-                        for (
-                            const photoDoc of photosSnapshot.docs
-                        ) {
-
-                            await deleteDoc(
-                                doc(
-                                    db,
-                                    "teams",
-                                    teamName,
-                                    "photos",
-                                    photoDoc.id
-                                )
-                            );
-
-                        }
-
-
-                        // ============================
-                        // チーム本体を削除
-                        // ============================
-
-                        await deleteDoc(
-                            doc(
-                                db,
-                                "teams",
-                                teamName
-                            )
-                        );
-
-
-                        alert(
-                            `チーム ${teamName} を削除しました。`
-                        );
-
-
-                        // ============================
-                        // 一覧を再読み込み
-                        // ============================
-
-                        await loadTeams();
-
-
-                    } catch (
-                        error
-                    ) {
-
-                        console.error(
-                            "チーム削除エラー:",
-                            error
-                        );
-
-
-                        alert(
-                            "チームの削除に失敗しました。\n\n" +
-                            error.message
-                        );
-
-
-                        // ボタンを元に戻す
-                        deleteButton.disabled =
-                            false;
-
-
-                        deleteButton.textContent =
-                            "🗑️ チームを削除";
-
-                    }
-
-                }
-            );
-
-
-            teamList.appendChild(
-                card
-            );
-
-        }
-
-
-    } catch (
-        error
-    ) {
+    } catch (error) {
 
         console.error(
             "チーム情報取得エラー:",
@@ -407,7 +1198,9 @@ async function loadTeams() {
                 </p>
 
                 <p>
-                    ${error.message}
+                    ${escapeHtml(
+                        error.message
+                    )}
                 </p>
 
             </div>
@@ -420,170 +1213,209 @@ async function loadTeams() {
 
 
 // ============================
-// チーム写真表示
+// 写真モーダル表示
 // ============================
 
-function showTeamPhotos(
-    teamName,
-    photosSnapshot
+function showPhotoModal(
+    imageUrl,
+    missionTitle
 ) {
 
-    photoModalTitle.textContent =
-        `チーム ${teamName} の登録写真`;
+    let photoModal =
+        document.getElementById(
+            "photoModal"
+        );
 
 
-    photoList.innerHTML = "";
+    let photoModalImage =
+        document.getElementById(
+            "photoModalImage"
+        );
 
 
+    let photoModalTitle =
+        document.getElementById(
+            "photoModalTitle"
+        );
+
+
+    // HTMLにモーダルがある場合
     if (
-        photosSnapshot.empty
+        photoModal &&
+        photoModalImage &&
+        photoModalTitle
     ) {
 
-        photoList.innerHTML = `
+        photoModalImage.src =
+            imageUrl;
 
-            <p>
-                登録写真はありません。
-            </p>
+        photoModalTitle.textContent =
+            missionTitle || "";
 
-        `;
+        photoModal.style.display =
+            "flex";
+
+        return;
 
     }
 
 
-    // ============================
-    // ミッション番号順に並べる
-    // ============================
+    // HTMLにない場合は
+    // JavaScriptで作成
 
-    const photos =
-        photosSnapshot.docs
-            .map(
-                function (
-                    doc
-                ) {
-
-                    return {
-
-                        id:
-                            doc.id,
-
-                        data:
-                            doc.data()
-
-                    };
-
-                }
-            )
-            .sort(
-                function (
-                    a,
-                    b
-                ) {
-
-                    return (
-                        Number(a.id) -
-                        Number(b.id)
-                    );
-
-                }
-            );
+    photoModal =
+        document.createElement(
+            "div"
+        );
 
 
-    // ============================
-    // 写真表示
-    // ============================
-
-    photos.forEach(
-        function (
-            photo
-        ) {
-
-            const data =
-                photo.data;
+    photoModal.id =
+        "photoModal";
 
 
-            const item =
-                document.createElement(
-                    "div"
-                );
+    photoModal.style.position =
+        "fixed";
 
+    photoModal.style.left =
+        "0";
 
-            item.className =
-                "photo-item";
+    photoModal.style.top =
+        "0";
 
+    photoModal.style.width =
+        "100%";
 
-            item.innerHTML = `
+    photoModal.style.height =
+        "100%";
 
-                <div class="photo-item-title">
+    photoModal.style.background =
+        "rgba(0,0,0,0.85)";
 
-                    ${Number(photo.id) + 1}.
-                    ${data.missionTitle || "ミッション"}
-
-                </div>
-
-
-                <img
-                    src="${data.imageUrl}"
-                    alt="${data.missionTitle || "写真"}"
-                    class="admin-photo"
-                >
-
-            `;
-
-
-            photoList.appendChild(
-                item
-            );
-
-        }
-    );
-
+    photoModal.style.zIndex =
+        "99999";
 
     photoModal.style.display =
         "flex";
+
+    photoModal.style.flexDirection =
+        "column";
+
+    photoModal.style.alignItems =
+        "center";
+
+    photoModal.style.justifyContent =
+        "center";
+
+
+    photoModal.innerHTML = `
+
+        <button
+            id="photoModalCloseButton"
+            style="
+                position:absolute;
+                top:20px;
+                right:20px;
+                font-size:30px;
+                color:white;
+                background:none;
+                border:none;
+                cursor:pointer;
+            "
+        >
+            ✕
+        </button>
+
+
+        <img
+            id="photoModalImage"
+            src="${escapeHtml(imageUrl)}"
+            style="
+                max-width:90%;
+                max-height:80%;
+                object-fit:contain;
+                border-radius:10px;
+            "
+        >
+
+
+        <div
+            id="photoModalTitle"
+            style="
+                color:white;
+                font-size:18px;
+                margin-top:15px;
+                text-align:center;
+            "
+        >
+            ${escapeHtml(
+                missionTitle || ""
+            )}
+        </div>
+
+    `;
+
+
+    document.body.appendChild(
+        photoModal
+    );
+
+
+    document
+        .getElementById(
+            "photoModalCloseButton"
+        )
+        .addEventListener(
+            "click",
+            function() {
+
+                photoModal.style.display =
+                    "none";
+
+            }
+        );
+
+
+    photoModal.addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                event.target === photoModal
+            ) {
+
+                photoModal.style.display =
+                    "none";
+
+            }
+
+        }
+    );
 
 }
 
 
 // ============================
-// モーダルを閉じる
+// 初期処理
 // ============================
 
-closePhotoModal.addEventListener(
-    "click",
-    function () {
+async function init() {
 
-        photoModal.style.display =
-            "none";
-
-    }
-);
+    console.log(
+        "★★ 管理者ダッシュボード起動 ★★"
+    );
 
 
-// ============================
-// 背景クリックで閉じる
-// ============================
-
-photoModal.addEventListener(
-    "click",
-    function (
-        event
-    ) {
-
-        if (
-            event.target === photoModal
-        ) {
-
-            photoModal.style.display =
-                "none";
-
-        }
-
-    }
-);
+    await renderMissionEditor();
 
 
-// ============================
-// 初期読み込み
-// ============================
+    await loadTeams();
 
-loadTeams();
+
+    console.log(
+        "★★ 管理者ダッシュボード起動完了 ★★"
+    );
+
+}
+
+
+init();
